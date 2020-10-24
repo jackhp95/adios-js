@@ -7,10 +7,12 @@
     "dist",
     "src"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jackhp95/adios-js"
+  },
   "exports": {
-    ".": {
       "import": "./dist/adios-js.esm.js"
-    }
   },
   "keywords": [
     "adios",

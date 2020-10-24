@@ -19,7 +19,7 @@ const tick = async (count = 1) => {
 interface API { dom: string[], data: string[] };
 
 const getAPI = () => {
-    const htmlStr: string = (<any>window).adios.root.outerHTML;
+    const htmlStr: string = (window as any).adios.root.outerHTML;
     const regex = /\sdata-(.*?)="(.*?)"/g;
     const matches: RegExpMatchArray[] = Array.from(htmlStr.matchAll(regex));
     const getDomAndData = (acc: API, m: RegExpMatchArray) => {

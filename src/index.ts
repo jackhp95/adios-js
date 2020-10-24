@@ -7,11 +7,11 @@ const adios = (init: Init) => {
   const config: Config = merge(defaultConfig, init);
 
   // setRender function on namespace 
-  (<any>window).adios = render;
+  (window as any).adios = render;
 
   // set properties on namespace 
   Object.entries(config).map(([key, value]) =>
-    (<any>window).adios[key] = value);
+    (window as any).adios[key] = value);
 
   // render once dom is loaded
   document.addEventListener("DOMContentLoaded", () => {

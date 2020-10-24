@@ -13,20 +13,20 @@ const findNodes = (node: Element): NodeListOf<Element> =>
 
 const update = (node: Element) =>
     ([asKey, isKey]: [string, string | unknown]) => {
-        const value: any = (<any>window).adios.resolve.value(isKey);
-        const codec: Codec = (<any>window).adios.resolve.codec(asKey);
+        const value: any = (window as any).adios.resolve.value(isKey);
+        const codec: Codec = (window as any).adios.resolve.codec(asKey);
         codec.push(node)(value);
     }
 
 
 const bind = (node: Element): void => {
-    Object.entries((<any>node).dataset)
+    Object.entries((node as any).dataset)
         .forEach(update(node));
 }
 
 
 const render = (): void => {
-    const nodes = findNodes((<any>window).adios.root);
+    const nodes = findNodes((window as any).adios.root);
     nodes.forEach(bind);
 };
 

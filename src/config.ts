@@ -44,12 +44,12 @@ const config: Config = {
     do: {},
     resolve: {
         value: (isKey: string) => {
-            const findKey = get((<any>window).adios.is, isKey);
+            const findKey = get((window as any).adios.is, isKey);
             const fallback = console.log("Couldn't resolve value of:", isKey);
             return findKey || fallback;
         },
         codec: (asKey: string) => {
-            const findKey = get((<any>window).adios.as, asKey);
+            const findKey = get((window as any).adios.as, asKey);
             const fallback = { push: () => console.log("Couldn't resolve codec of:", asKey) };
             return findKey || fallback;
         },

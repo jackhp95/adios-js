@@ -75,21 +75,21 @@ const dataElse: Codec = {
 
 const each: Codec = {
     push: (node) => (dataValue: any) => {
-        const dataKey: string = (<any>node).dataset.each || ""
+        const dataKey: string = (node as any).dataset.each || ""
         // node is <template>, so the HTML api is a bit different
-        const cloneNode = () => (<any>node).content.cloneNode(true);
+        const cloneNode = () => (node as any).content.cloneNode(true);
         const clones = times(dataValue.length, cloneNode);
 
         clones.forEach((clone, i) => {
             findNodes(<Element>clone).forEach((node) => {
-                for (let prop in (<any>node).dataset) {
-                    const childKey = (<any>node).dataset[prop];
-                    (<any>node).dataset[prop] = `${dataKey}[${i}].${childKey}`;
+                for (let prop in (node as any).dataset) {
+                    const childKey = (node as any).dataset[prop];
+                    (node as any).dataset[prop] = `${dataKey}[${i}].${childKey}`;
                     bind(node);
                 }
             });
         });
-        (<any>node).parentNode.append(...clones);
+        (node as any).parentNode.append(...clones);
     }
     , pull: () => { },
 };

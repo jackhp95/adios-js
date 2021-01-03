@@ -1,103 +1,65 @@
-# TSDX User Guide
+# Adios.js
 
-Congrats! You just saved yourself hours of work by bootstrapping this project with TSDX. Let’s get you oriented with what’s here and how to use it.
+## Get started.
+Script Tag, That's it.
+Down the line, I'll get Treeshaking working nicely! 
 
-> This TSDX setup is meant for developing libraries (not apps!) that can be published to NPM. If you’re looking to build a Node app, you could use `ts-node-dev`, plain `ts-node`, or simple `tsc`.
+## Here's the quick pitch: 
+The goal behind Adios.js is in the name. The hope is you'll be able to build interactive web pages without writing any js!
 
-> If you’re new to TypeScript, checkout [this handy cheatsheet](https://devhints.io/typescript)
+## What's different?
+Different is a relative word! Let's talk about the web today!
+HTML is pretty limited in what it can do! From this simple fact, thousand of solutions have been built!
 
-## Commands
+### Imperative Solutions: jQuery, Cashdom
+  It's a very cool javascript API for modifying HTML, with a couple extras thrown in there.
+  However, it can be easy to get lost in the spagettii sauce. 
+    - Selectors can fall out of sync with the HTML. 
+    - Lots of context switching. 
+    - Casues verbose code and is quite large.
 
-TSDX scaffolds your new library inside `/src`.
+### Client side JS frameworks: React, Vue, Angular
+  Ditch HTML, Viva la JS! You'll have all of the power you'll ever need.
+  However, they can be limiting in other ways, you're fighting the platform!
+    - You ultimately need to render to HTML, how and where has its costs.
+      - Client-side: You'll need to deliver a bunch of JS, just to build some HTML.
+      - SSR: You'll need to deliver a bunch of js to explain what the HTML means. (Hydration)
+    - You'll also find yourself likely learning a dialect of HTML or inheriting a build process just to get a web page.
+    
+### HTML First Approaches: Alpine.js, Stimulus, Hyperscript, and HTMX
+  Embrace HTML, Just augment it with the JS you need! 
+  These solutions great and are the most similar to Adios JS, but let's talk about them breifly! 
+    - Alpine.js: Vue inspired, onevents aren't HTML spec and can be quite verbose with logic.
+    - Stimulus: Can be pretty verbose, onevents are even stranger, and is strongly Object oriented if that's your thing.
+    - Hyperscript: Small and terse language which is evaluated clientside.
+    - HTMX: Leverages HTTP within HTML for updating dom.
+  These are all cool solutions, but I had some ideas which sets Adios apart.
+  
+### Adios.js Features
+Think of it like the inverse of a JS framework. It swaps data and view with a lot of the claims.
+- Hydration: You can run `$().pull()` on any HTML page using Adios.js and hydrate/update the *data*. 
+- Templating: You can update the $ object and run `$().push()` to apply the data changes to your HTML.
+- Self-documenting HTML: You'll never need to leave your HTML to understand what's happening with Adios.js.
+- Extensible: Simple API which allows you to create your own codecs! (Html -> Data & Data -> Html);
+- Customizable: Tons of ways to make Adios work for you. Change namespaces, Change resolver, etc.
+- Easy to Treeshake: HTML can be used as a guide to determine what parts of Adios are being used on your page.
+- Utility JS: Like Utility CSS, Utility JS allows you to use JS within HTML easily! Toggle classes, update dom, fetch data.
+- No Opinions: No new syntax, build process, or language. It's the same HTML you know and love. Drop in a script tag, and you're ready!
+- Lightweight: No template literals, no transpliling, no clientside rendering, no serverside rendering, 
 
-To run TSDX, use:
 
-```bash
-npm start # or yarn start
-```
+## Principles 
+- Idempotent: Running push again and again shouldn't change the html unless the data changed. Running Pull shouldn't change the data if the HTML hasn't changed.
+- Isomorphic: Data should be able to be pulled from the HTML and HTML should be able to be built on that template with that data.
+- Views and Behavior(onevents) should live in HTML.
+- Logic and Data should live in Javascript.
+- Event -> Logic -> Data Update -> View Update.
 
-This builds to `/dist` and runs the project in watch mode so any edits you save inside `src` causes a rebuild to `/dist`.
 
-To do a one-off build, use `npm run build` or `yarn build`.
-
-To run tests, use `npm test` or `yarn test`.
-
-## Configuration
-
-Code quality is set up for you with `prettier`, `husky`, and `lint-staged`. Adjust the respective fields in `package.json` accordingly.
-
-### Jest
-
-Jest tests are set up to run with `npm test` or `yarn test`.
-
-### Bundle Analysis
-
-[`size-limit`](https://github.com/ai/size-limit) is set up to calculate the real cost of your library with `npm run size` and visualize the bundle with `npm run analyze`.
-
-#### Setup Files
-
-This is the folder structure we set up for you:
-
-```txt
-/src
-  index.tsx       # EDIT THIS
-/test
-  blah.test.tsx   # EDIT THIS
-.gitignore
-package.json
-README.md         # EDIT THIS
-tsconfig.json
-```
-
-### Rollup
-
-TSDX uses [Rollup](https://rollupjs.org) as a bundler and generates multiple rollup configs for various module formats and build settings. See [Optimizations](#optimizations) for details.
-
-### TypeScript
-
-`tsconfig.json` is set up to interpret `dom` and `esnext` types, as well as `react` for `jsx`. Adjust according to your needs.
-
-## Continuous Integration
-
-### GitHub Actions
-
-Two actions are added by default:
-
-- `main` which installs deps w/ cache, lints, tests, and builds on all pushes against a Node and OS matrix
-- `size` which comments cost comparison of your library on every pull request using [`size-limit`](https://github.com/ai/size-limit)
-
-## Optimizations
-
-Please see the main `tsdx` [optimizations docs](https://github.com/palmerhq/tsdx#optimizations). In particular, know that you can take advantage of development-only optimizations:
-
-```js
-// ./types/index.d.ts
-declare var __DEV__: boolean;
-
-// inside your code...
-if (__DEV__) {
-  console.log('foo');
-}
-```
-
-You can also choose to install and use [invariant](https://github.com/palmerhq/tsdx#invariant) and [warning](https://github.com/palmerhq/tsdx#warning) functions.
-
-## Module Formats
-
-CJS, ESModules, and UMD module formats are supported.
-
-The appropriate paths are configured in `package.json` and `dist/index.js` accordingly. Please report if any issues are found.
-
-## Named Exports
-
-Per Palmer Group guidelines, [always use named exports.](https://github.com/palmerhq/typescript#exports) Code split inside your React app instead of your React library.
-
-## Including Styles
-
-There are many ways to ship styles, including with CSS-in-JS. TSDX has no opinion on this, configure how you like.
-
-For vanilla CSS, you can include it at the root directory and add it to the `files` section in your `package.json`, so that it can be imported separately by your users and run through their bundler's loader.
-
-## Publishing to NPM
-
-We recommend using [np](https://github.com/sindresorhus/np).
+## Roadmap
+- Treeshaking
+- Catch undefined actions
+- Catch undefined codecs
+- Smarter updates (only update dom nodes where the codec uses data which has changed.)
+- New Events (entrance, exit, scrollend)
+- Improve Resolver ["json.data", ".class". "#id", "property", "/absolute", "http://www.url.tld"]

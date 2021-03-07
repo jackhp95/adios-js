@@ -304,7 +304,6 @@
                                             data-text="name"
                                             class="truncate"
                                         >
-                                            Home
                                         </span>
                                     </a>
                                 </template>
@@ -398,7 +397,7 @@
                         <div class="mt-4">
                             <h1 class="sr-only">Recent questions</h1>
                             <ul class="space-y-4">
-                                <template data-each="sg.data.ok.events">
+                                <template data-each="sg.ok.events">
                                     <li
                                         class="flex flex-col col-span-1 text-center bg-white divide-y divide-gray-200 rounded-lg shadow">
                                         <div class="flex flex-col flex-1 p-8">
@@ -590,11 +589,11 @@
         </div>
         <script type="module">
             import _ from "https://cdn.skypack.dev/lodash";
+            import { flatten } from "../src/internals/tiny.js";
             import { Oath, Adios } from "/src/adios.js"
             // import Adios from "/dist/adios.js"
             window.data = Adios();
 
-            const between = (start, end) => (str) => str.substring(str.lastIndexOf(start) + 1, str.lastIndexOf(end));
             const asIcon = (val) => `https://cdn.jsdelivr.net/npm/heroicons@0.4.2/outline/${val}.svg`;
 
             const ui = {};
@@ -633,7 +632,7 @@
                 { name: "Talents", href: "/g/Talents" },
                 { name: "Gaming", href: "/g/Gaming" }
             ];
-            
+
             data.is.ui = ui;
             data.is.follow = [
                 {
@@ -693,7 +692,10 @@
                     event.performers[0].image || (event.performers[0].image = ui.icon.dots);
                 });
             };
-            data.is.sg = Oath(fetch(sgUrl), tranformEvents);
+            data.is.sg = {};
+            Oath(data.is.sg, fetch(sgUrl), tranformEvents);
+
+
         </script>
     </body>
 

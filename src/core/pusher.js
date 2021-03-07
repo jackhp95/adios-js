@@ -6,14 +6,14 @@ import {
   isEqual,
   flatten,
 } from "../internals/tiny.js";
-// import prox from "./../internals/prox.js";
-import prox from 'https://cdn.skypack.dev/observable-slim';
+import prox from "./../internals/prox.js";
+// import prox from 'https://cdn.skypack.dev/observable-slim';
 import { config } from "./../config/default.js";
 
 const noop = () => {};
 
 const watch = (target = {}, callback = noop, path = []) =>
-  prox.create(target, false, callback);
+  prox().create(target, callback);
 
 const be = (rawObj, proxy) => (...args) => {
   const switcher = {
@@ -52,70 +52,37 @@ const monitor = (
 
 // can be throughly improved with a good map;
 // pushCodecClosureMap.get(path)(val);
-const push = (me) => (changes = [{}]) => {
-  // console.log(changes);
-  changes.forEach(({ currentPath, newValue, type } = {}) => {
-    // find all elements with the path that's being updated.
-    const updatePath = currentPath;
-    const addPath = () => currentPath.split(".").slice(0, -1).join(".");
-    const isUpdate = type === "update" || type === undefined;
-    const usePath = isUpdate ? updatePath : addPath();
-    const els = me.util.elements(usePath, !isUpdate);
-    // console.log("Relevant:", { type, usePath, isUpdate, els });
-    // push updates to each codec on element
-    const pushToCodec = (el) => ([_codec]) => {
-      const pullWith = me.codecs[_codec].pull;
-      const isEq = isEqual(newValue, pullWith(el));
-      const pushToView = () => {
-        // requestAnimationFrame(() => {
-        // with list-codec, adding data doesn't affect the list itself, only adds an item.
-        // this means we need to pop one off the given path, to account for added values
-        // because you can't safely assume that the value passed in will map to the relevant paths
-        // you must resolve the value from the resolver on the element in question.
-        const pathToResolve = el.dataset[_codec];
-        const resolvedValue = me.resolver(pathToResolve);
-        const provideValue =
-          resolvedValue === undefined ? newValue : resolvedValue;
-        // console.log("Pushing", { el, _codec, pathToResolve, provideValue });
-        me.codecs[_codec].push(el, provideValue);
-        // });
-      };
-      isEq || pushToView();
+const push = (me) => (path = "") => {
+  console.log({ path, be: me.be() });
+  const els = me.util.elements(path, true);
+  // console.log("Relevant:", { type, usePath, isUpdate, els });
+  // push updates to each codec on element
+  const pushToCodec = (el) => (_codec) => {
+    const value = el.dataset[_codec] && me.resolver(el.dataset[_codec]);
+    const pushToView = () => {
+      const closure = me.codecs[_codec].push(el, value);
+      // console.log({ _codec, path, value });
+      requestAnimationFrame(closure);
     };
-    // will be false if codec doesn't exist AND path doesn't match
-    const isRelevant = ([_codec, _path]) => {
-      const relevant = usePath
-        ? [
-            me.codecs[_codec], // codec exists
-            // if updating data,
-            isUpdate
-              ? // check if path matches,
-                usePath === _path
-              : // otherwise if data structure changes
-                // check path starts with the same value as
-                // the path you've added data to
-                _path.startsWith(usePath),
-          ].every((x) => x)
-        : // if theres no path, everything is relevant,
-          me.codecs[_codec]; // codec exists
-      // console.log({ _codec, _path, usePath, relevant });
-      return relevant;
-    };
-    // push updates to each element
-    const pushToElement = (el) =>
-      Object.entries(el.dataset).filter(isRelevant).forEach(pushToCodec(el));
-    els.forEach(pushToElement);
-  });
+    undefined !== value && queueMicrotask(pushToView);
+  };
+  // will be false if codec doesn't exist AND path doesn't match
+  const isRelevant = (_codec) => _codec in me.codecs;
+  // push updates to each element
+  const pushToElement = (el) =>
+    Object.keys(el.dataset).filter(isRelevant).forEach(pushToCodec(el));
+  els.forEach(pushToElement);
 };
-
 
 // opinionated config for Adios
 // takes me
 // updates dom from to me.config.root || document
 // puts proxy at .is
 const pusher = (me = config) => {
-  me.pusher = push(me);
-  me.push = () => me.pusher();
+  me.pushSet = new Set();
+  me.pusher = (changes) =>
+    changes.forEach(({ currentPath }) => push(me)(currentPath));
+  me.push = push(me);
   monitor(me, me.pusher, "is", "be", "util.raw");
   return me;
 };

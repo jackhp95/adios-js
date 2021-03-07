@@ -15,7 +15,7 @@ const strIsNum = (str) => str.trim() && (0 === +str || +str);
 const asKey = (key) => (strIsNum(key) ? +key : key);
 
 const get = (obj, path) =>
-  path.split(".").reduce((acc, c) => acc && acc[`${c}`], obj);
+  path.split(".").reduce((acc, c) => acc && acc[c], obj);
 
 const set = (obj, path, value) =>
   path
@@ -25,6 +25,9 @@ const set = (obj, path, value) =>
         i + 1 === length ? (acc[c] = value) : acc?.[c],
       obj
     );
+
+const between = (start, end) => (str) =>
+  str.substring(str.lastIndexOf(start) + 1, str.lastIndexOf(end));
 
 const isElement = (el) => el instanceof Element || el instanceof HTMLDocument;
 
@@ -127,7 +130,25 @@ const flatten = (obj, path = []) => {
 const unflatten = (obj) =>
   Object.entries(obj).reduce((acc, [k, v]) => set(k, v, acc), {});
 
+const withDefault = (maybe, fallback) =>
+  maybe === undefined ? fallback : maybe;
+
+const batch = queueMicrotask;
+const queue = () => setTimeout(fn, 0);
+const beforeFrame = requestAnimationFrame;
+const afterFrame = (fn) => beforeFrame(queue(fn));
+const nextFrame = (fn) => beforeFrame(beforeFrame(fn));
+const idle = (fn) => requestIdleCallback(fn);
+
 export {
+  batch,
+  queue,
+  beforeFrame,
+  afterFrame,
+  nextFrame,
+  idle,
+  withDefault,
+  between,
   flatten,
   unflatten,
   kebabCase,

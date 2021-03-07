@@ -16,7 +16,7 @@ import { intersection, set, isString } from "../internals/tiny.js";
  */
 const prop = (name) => ({
   push: (el, val) => () => (el[name] = val),
-  pull: (el) => el[name],
+  pull: (el) => el[name] || undefined,
 });
 
 /**
@@ -25,7 +25,9 @@ const prop = (name) => ({
  */
 const dual = (name) => ({
   push: (el, val) => () => [prop, attr].forEach((fn) => fn(name).push(el, val)),
-  pull: (el) => [prop, attr].forEach((fn) => fn(name).pull(el))[0],
+  pull: (el) =>
+    [prop, attr].forEach((fn) => fn(name).pull(el)).filter((x) => x)[0] ||
+    undefined,
 });
 
 /**
@@ -34,17 +36,11 @@ const dual = (name) => ({
  */
 const attr = (name) => ({
   push: (el, val) => () => el.setAttribute(name, val),
-  pull: (el) => el.getAttribute(name),
+  pull: (el) => el.getAttribute(name) || undefined,
 });
 
 const each = (me) => ({
   push: (el, val = {}) => {
-    // ejects if the object added isn't a proxy yet
-    if (!val.__isProxy) {
-      return;
-    }
-    // break proxy for console.log
-    // console.log("Pushing each", Object.keys(val));
     const rootPath = el.dataset.each;
     // the filter function prevents __internal fields from being exposed
     const items = Object.keys(val).filter((s) => !/^__/.exec(s));
@@ -52,34 +48,43 @@ const each = (me) => ({
     const parent = el.parentElement;
     const siblings = () => [...parent.children].filter((x) => x !== el);
 
-    const children = items.map((k) => {
-      const child = clone();
-      const binds = [...child.querySelectorAll(me.util.selectors())];
-      const prefix = (ele) => {
-        Object.entries(ele.dataset)
-          .filter(([_codec, itemPath]) =>
-            Object.keys(me.codecs).includes(_codec)
-          )
-          .forEach(([_codec, itemPath]) => {
-            // console.log("Pushing:", _codec, itemPath);
-            //  if escaping scope
-            const newPath = itemPath.startsWith("~")
-              ? // then remove ~ so resolver works
-                itemPath.substring(1)
-              : // otherwise, scope the path
-                `${rootPath}.${k}.${itemPath}`;
-            // console.log(newPath);
-            ele.dataset[_codec] = newPath;
-            me.codecs[_codec].push(ele, me.resolver(newPath));
-          });
-      };
-      binds.forEach(prefix);
-      return child;
-    });
-    requestAnimationFrame(() => {
+    const [children, closures] = items
+      .map((k) => {
+        const child = clone();
+        const binds = [...child.querySelectorAll(me.util.selectors())];
+        const asClosures = (ele) =>
+          Object.entries(ele.dataset)
+            .filter(([_codec, itemPath]) =>
+              Object.keys(me.codecs).includes(_codec)
+            )
+            .flatMap(([_codec, itemPath]) => {
+              // console.log("Pushing:", _codec, itemPath);
+              //  if escaping scope
+              const newPath = itemPath.startsWith("~")
+                ? // then remove ~ so resolver works
+                  itemPath.substring(1)
+                : // otherwise, scope the path
+                  `${rootPath}.${k}.${itemPath}`;
+              ele.dataset[_codec] = newPath;
+              // console.log(ele.dataset[_codec]);
+              return me.codecs[_codec].push(ele, me.resolver(newPath));
+            });
+
+        return [child, binds.flatMap(asClosures)];
+      })
+      .reduce(
+        ([children, acc], [child, cur]) => [
+          [...children, child],
+          [...acc, ...cur],
+        ],
+        [[], []]
+      );
+
+    return () => {
       siblings().forEach((x) => x.remove());
+      closures.map((fn) => fn());
       parent.append(...children);
-    });
+    };
   },
   pull: (el) => {
     const prefix = el.dataset.each;
@@ -101,9 +106,9 @@ const each = (me) => ({
 });
 
 const inject = (me) => ({
-  push: (el, val) => {
+  push: (el, val) => () =>
     // this ensures that all of the other codecs resolved before continuing
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       // could and should be improved by building in a cache
       // right now, the val will only be undefined because its cache isn't established
       const url = me.resolver(el.dataset.src);
@@ -113,7 +118,7 @@ const inject = (me) => ({
           src: el.dataset.src,
           url,
         });
-        return undefined;
+        return () => {};
       }
 
       fetch(url).then((response) =>
@@ -121,28 +126,26 @@ const inject = (me) => ({
           .text()
           .catch(console.log)
           .then((nodeStr) => {
-            requestAnimationFrame(() => {
-              // prevent multiple injections
-              if (el?.nextElementSibling?.dataset?.injected) {
-                return;
-              }
-              const injectedEl = document.createElement("div");
-              injectedEl.classList.add(...el.classList);
-              injectedEl.innerHTML = nodeStr;
-              // inserts the fetched text, and makes it the sibling of the element
-              el.insertAdjacentElement("afterend", injectedEl);
-              injectedEl.dataset.injected = true;
-              me.util.hide(el);
-            });
+            // requestAnimationFrame(() => {
+            // prevent multiple injections
+            if (el?.nextElementSibling?.dataset?.injected) {
+              return;
+            }
+            const injectedEl = document.createElement("div");
+            injectedEl.classList.add(...el.classList);
+            injectedEl.innerHTML = nodeStr;
+            // inserts the fetched text, and makes it the sibling of the element
+            el.insertAdjacentElement("afterend", injectedEl);
+            injectedEl.dataset.injected = true;
+            me.util.hide(el);
+            // });
           })
       );
-    }, 0);
-  },
+    }),
   pull: (el) =>
     el?.nextElementSibling?.dataset?.injected &&
     el?.nextElementSibling?.outerHtml,
 });
-
 
 const codecs = (me = {}) => {
   me.codecs = {
@@ -152,7 +155,7 @@ const codecs = (me = {}) => {
     src: {
       push: (el, val) =>
         // is string, not empty, then set
-        requestAnimationFrame(() => isString(val) && val && (el.src = val)),
+        () => isString(val) && val && (el.src = val),
       pull: (el) => el.src || undefined,
     },
     replace: prop("outerHTML"),

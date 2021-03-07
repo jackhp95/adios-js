@@ -1,3 +1,76 @@
+// super light lodash replacements
+
+const kebabCase = (str) =>
+  str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+
+const camelCase = (str) => str.replace(/-./g, (m) => m.toUpperCase()[1]);
+
+const intersection = (a, ...arr) =>
+  [...new Set(a)].filter((v) => arr.every((b) => b.includes(v)));
+
+const get = (obj, path) =>
+  path.split(".").reduce((acc, c) => acc && acc[c], obj);
+
+const set = (obj, path, value) =>
+  path
+    .split(".")
+    .reduce(
+      (acc = {}, c, i, { length }) =>
+        i + 1 === length ? (acc[c] = value) : acc?.[c],
+      obj
+    );
+
+const isElement = (el) => el instanceof Element || el instanceof HTMLDocument;
+
+const cloneDeep = (obj, hash = new WeakMap()) => {
+  if (Object(obj) !== obj) return obj; // primitives
+  if (hash.has(obj)) return hash.get(obj); // cyclic reference
+  const result =
+    obj instanceof Set
+      ? new Set(obj) // See note about this!
+      : obj instanceof Map
+      ? new Map(Array.from(obj, ([key, val]) => [key, cloneDeep(val, hash)]))
+      : obj instanceof Date
+      ? new Date(obj)
+      : obj instanceof RegExp
+      ? new RegExp(obj.source, obj.flags)
+      : // ... add here any specific treatment for other classes ...
+      // and finally a catch-all:
+      obj.constructor
+      ? new obj.constructor()
+      : Object.create(null);
+  hash.set(obj, result);
+  return Object.assign(
+    result,
+    ...Object.keys(obj).map((key) => ({ [key]: cloneDeep(obj[key], hash) }))
+  );
+};
+const isString = (str) => typeof str === "string" || str instanceof String;
+
+const isObject = (item) =>
+  item && typeof item === "object" && !Array.isArray(item);
+
+const merge = (target, ...sources) => {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (isObject(source[key])) {
+        if (!target[key]) Object.assign(target, { [key]: {} });
+        merge(target[key], source[key]);
+      } else {
+        Object.assign(target, { [key]: source[key] });
+      }
+    }
+  }
+
+  return merge(target, ...sources);
+};
+
+const withDefault = (maybe, fallback) =>
+  maybe === undefined ? fallback : maybe;
+
 /*
  * 	Observable Slim
  *	Version 0.1.5
@@ -11,8 +84,7 @@
  *	reflecting changes in the model to the view. Observable Slim aspires to be as lightweight and easily
  *	understood as possible. Minifies down to roughly 3000 characters.
  */
-export default function () {
-  var paths = [];
+function prox () {
   // An array that stores all of the observables created through the public create() method below.
   var observables = [];
   // An array of all the objects that we have assigned Proxies to
@@ -55,7 +127,6 @@ export default function () {
 
     // record the nested path taken to access this object -- if there was no path then we provide the first empty entry
     var path = originalPath || [{ target: target, property: "" }];
-    paths.push(path);
 
     // in order to accurately report the "previous value" of the "length" property on an Array
     // we must use a helper property because intercepting a length change is not always possible as of 8/13/2018 in
@@ -726,3 +797,390 @@ export default function () {
     // }
   };
 }
+
+/**
+ * Codec
+ * @typedef {Object} Codec
+ * @property {Function} push -
+ * @property {Function} pull -
+ */
+
+/**
+ * This function will take any string of a property,
+ * and return a codec for the property.
+ *
+ * @param {string} name - Name of the property
+ * @returns {codec} - the codec object
+ */
+const prop = (name) => ({
+  push: (el, val) => () => (el[name] = val),
+  pull: (el) => el[name] || undefined,
+});
+
+const each = (me) => ({
+  push: (el, val = {}) => {
+    const rootPath = el.dataset.each;
+    // the filter function prevents __internal fields from being exposed
+    const items = Object.keys(val).filter((s) => !/^__/.exec(s));
+    const clone = () => el.content.firstElementChild.cloneNode(true);
+    const parent = el.parentElement;
+    const siblings = () => [...parent.children].filter((x) => x !== el);
+
+    const [children, closures] = items
+      .map((k) => {
+        const child = clone();
+        const binds = [...child.querySelectorAll(me.util.selectors())];
+        const asClosures = (ele) =>
+          Object.entries(ele.dataset)
+            .filter(([_codec, itemPath]) =>
+              Object.keys(me.codecs).includes(_codec)
+            )
+            .flatMap(([_codec, itemPath]) => {
+              // console.log("Pushing:", _codec, itemPath);
+              //  if escaping scope
+              const newPath = itemPath.startsWith("~")
+                ? // then remove ~ so resolver works
+                  itemPath.substring(1)
+                : // otherwise, scope the path
+                  `${rootPath}.${k}.${itemPath}`;
+              ele.dataset[_codec] = newPath;
+              // console.log(ele.dataset[_codec]);
+              return me.codecs[_codec].push(ele, me.resolver(newPath));
+            });
+
+        return [child, binds.flatMap(asClosures)];
+      })
+      .reduce(
+        ([children, acc], [child, cur]) => [
+          [...children, child],
+          [...acc, ...cur],
+        ],
+        [[], []]
+      );
+
+    return () => {
+      siblings().forEach((x) => x.remove());
+      closures.map((fn) => fn());
+      parent.append(...children);
+    };
+  },
+  pull: (el) => {
+    const prefix = el.dataset.each;
+    const result = {};
+    const els = me.util.elements(prefix, true);
+    const codecs = Object.keys(me.codecs).filter((x) => x !== "each");
+    els.forEach((ele) => {
+      const hasCodecs = intersection(Object.keys(ele.dataset), codecs);
+      hasCodecs.forEach((c) => {
+        const pulledVal = me.codecs[c].pull(el);
+        const subPath = ele.dataset[c].replace(prefix + ".", "");
+        set(result, subPath, pulledVal);
+      });
+    });
+    // console.log("Pulled from each", result);
+    return result;
+  },
+  // parent.querySelectorAll("[data-codec^='path.starts.with']"), pull all into new reduced Object.
+});
+
+const inject = (me) => ({
+  push: (el, val) => () =>
+    // this ensures that all of the other codecs resolved before continuing
+    requestAnimationFrame(() => {
+      // could and should be improved by building in a cache
+      // right now, the val will only be undefined because its cache isn't established
+      const url = me.resolver(el.dataset.src);
+      if (!url) {
+        console.log("No data-src resolved for data-inject to inject", {
+          el,
+          src: el.dataset.src,
+          url,
+        });
+        return () => {};
+      }
+
+      fetch(url).then((response) =>
+        response
+          .text()
+          .catch(console.log)
+          .then((nodeStr) => {
+            // requestAnimationFrame(() => {
+            // prevent multiple injections
+            if (el?.nextElementSibling?.dataset?.injected) {
+              return;
+            }
+            const injectedEl = document.createElement("div");
+            injectedEl.classList.add(...el.classList);
+            injectedEl.innerHTML = nodeStr;
+            // inserts the fetched text, and makes it the sibling of the element
+            el.insertAdjacentElement("afterend", injectedEl);
+            injectedEl.dataset.injected = true;
+            me.util.hide(el);
+            // });
+          })
+      );
+    }),
+  pull: (el) =>
+    el?.nextElementSibling?.dataset?.injected &&
+    el?.nextElementSibling?.outerHtml,
+});
+
+const codecs = (me = {}) => {
+  me.codecs = {
+    text: prop("textContent"),
+    html: prop("innerHTML"),
+    href: prop("href"),
+    src: {
+      push: (el, val) =>
+        // is string, not empty, then set
+        () => isString(val) && val && (el.src = val),
+      pull: (el) => el.src || undefined,
+    },
+    replace: prop("outerHTML"),
+    each: each(me),
+    inject: inject(me),
+  };
+  return me;
+};
+
+const resolver = (me) => {
+  me.resolver = (...args) => {
+    const [path, value] = args;
+    const switcher = {
+      0: () => console.error("resolver has no args."),
+      1: () => {
+        const o = get(me.is, path);
+        // console.log(path, o);
+        return o;
+      },
+      2: () => set(me.is, path, value),
+      3: () => console.error("resolver has 3 or more args:", args),
+    };
+    return switcher[Math.min(args.length, 3)]();
+  };
+  return me;
+};
+
+// Internal Utils
+const typeOfObj = (arg) => {
+  const element = arg instanceof HTMLElement && "element";
+  const node = arg instanceof Node && "element";
+  const array = arg instanceof HTMLElement && "array";
+  const isNull = arg === null && "null";
+  return isNull || element || node || array || "object";
+};
+const typer = (arg) => {
+  const kind = typeof arg;
+  return kind === "object" ? typeOfObj(arg) : kind;
+};
+const argo = (config) => (...args) => config[typer(args[0])](...args);
+
+// Exposed Utils
+const selectors = (me = {}) => {
+  const asVal = (path, startsWith = false) =>
+    path ? (startsWith ? `^="${path}"` : `="${path}"`) : "";
+  // provides selector for all adios elements
+  const all = () => Object.keys(me.codecs).map(codec).join(",");
+  // provides selector for all elements using given codec
+  const codec = (c) => `[data-${me.util.asAttr(c)}]`;
+  // provides selector for all elements using given path
+  const path = (p, startsWith) =>
+    Object.keys(me.codecs)
+      .map((c) => `[data-${me.util.asAttr(c)}${asVal(p, startsWith)}]`)
+      .join(",");
+  // provides selector for all elements using the same paths as the given element.
+  const element = (el) => Object.values(el.dataset).map(path).join(",");
+  const fn = argo({
+    undefined: all,
+    element: element,
+    string: path,
+    object: codec,
+  });
+  const methods = { element, path, codec, all };
+  me.util.selectors = Object.assign(fn, methods);
+  return me;
+};
+
+const elements = (me = {}) => {
+  const root = me?.config?.root || document;
+  const sels = me.util.selectors;
+  const all = (...args) => [...root.querySelectorAll(sels.all(...args))];
+  const codec = (...args) => [...root.querySelectorAll(sels.codec(...args))];
+  const path = (...args) => [...root.querySelectorAll(sels.path(...args))];
+  const element = (...args) => [
+    ...root.querySelectorAll(sels.element(...args)),
+  ];
+  const fn = (...args) => [...root.querySelectorAll(sels(...args))];
+  const methods = { element, path, codec, all };
+  me.util.elements = Object.assign(fn, methods);
+  return me;
+};
+
+const util = (me = {}) => {
+  me.util = me.util || {};
+  me.util.asAttr = kebabCase;
+  me.util.asProp = camelCase;
+  selectors(me);
+  elements(me);
+  me.util.hide = (el) => el.hidden = true;
+  me.util.show = (el) => el.hidden = false;
+  return me;
+};
+
+const fixed = {
+  is: {},
+  config: { root: document },
+};
+const dynamic = [resolver, util, codecs];
+const config = dynamic.reduce((acc, cur) => cur(acc), fixed);
+
+const noop$1 = () => {};
+
+const watch$1 = (target = {}, callback = noop$1, path = []) =>
+  prox().create(target, callback);
+
+const be = (rawObj, proxy) => (...args) => {
+  const switcher = {
+    0: () => cloneDeep(rawObj),
+    1: (newObj) => merge(newObj, proxy),
+    2: (path, newObj) => merge(newObj, get(path, proxy)),
+  };
+  return switcher[args.length](...args);
+};
+
+const monitor$1 = (
+  me = {},
+  callback = noop$1,
+  path = false,
+  method = false,
+  raw = false
+) => {
+  // if path and raw is falsey provide an empty object to start
+  const rawObj = get(me, path) || get(me, raw) || {};
+
+  // create nested proxy, provide an the callback.
+  const proxy = watch$1(rawObj, callback);
+
+  // store the proxied data somewhere in the passed obj
+  raw && set(me, raw, rawObj);
+
+  // create method interface for proxy and raw data
+  method && set(me, method, be(rawObj, proxy));
+
+  // me now has the nested proxy at the path,
+  // with the callback firing when a value is updated.
+  path && set(me, path, proxy);
+  // return the mutated me
+  return proxy;
+};
+
+// can be throughly improved with a good map;
+// pushCodecClosureMap.get(path)(val);
+const push = (me) => (path = "") => {
+  console.log({ path, be: me.be() });
+  const els = me.util.elements(path, true);
+  // console.log("Relevant:", { type, usePath, isUpdate, els });
+  // push updates to each codec on element
+  const pushToCodec = (el) => (_codec) => {
+    const value = el.dataset[_codec] && me.resolver(el.dataset[_codec]);
+    const pushToView = () => {
+      const closure = me.codecs[_codec].push(el, value);
+      // console.log({ _codec, path, value });
+      requestAnimationFrame(closure);
+    };
+    undefined !== value && queueMicrotask(pushToView);
+  };
+  // will be false if codec doesn't exist AND path doesn't match
+  const isRelevant = (_codec) => _codec in me.codecs;
+  // push updates to each element
+  const pushToElement = (el) =>
+    Object.keys(el.dataset).filter(isRelevant).forEach(pushToCodec(el));
+  els.forEach(pushToElement);
+};
+
+// opinionated config for Adios
+// takes me
+// updates dom from to me.config.root || document
+// puts proxy at .is
+const pusher = (me = config) => {
+  me.pushSet = new Set();
+  me.pusher = (changes) =>
+    changes.forEach(({ currentPath }) => push(me)(currentPath));
+  me.push = push(me);
+  monitor$1(me, me.pusher, "is", "be", "util.raw");
+  return me;
+};
+
+const noop = () => {};
+const watchOpts = {
+  subtree: true,
+  childList: true,
+  attributes: true,
+  //   attributeFilter: false,
+  //   attributeOldValue: false,
+  //   characterData: false,
+  //   characterDataOldValue: false,
+};
+
+const mutsAsEls = (callback = noop) => (mutations) =>
+  mutations.forEach((mutation) =>
+    [mutation.target, ...mutation.addedNodes].forEach((node) =>
+      // Makes a microtask
+      Promise.resolve().then(() =>
+        callback(isElement(node) ? node : node.parentElement)
+      )
+    )
+  );
+
+const watch = (callback = noop) => new MutationObserver(mutsAsEls(callback));
+
+const monitor = (root = document, callback = noop, opts = watchOpts) =>
+  watch(callback).observe(root, opts);
+
+// can be throughly improved with a good map;
+// pushCodecClosureMap.get(path)(val);
+const pull = (me) => (el) => {
+  // find all codecs.
+  const codecs = intersection(Object.keys(el.dataset), Object.keys(me.codecs));
+
+  codecs.forEach((codec) => {
+    const path = el.dataset[codec];
+    const pullWith = me.codecs[codec].pull;
+    const domVal = pullWith(el);
+    const dataVal = me.resolver(path);
+    domVal === dataVal || me.resolver(path, domVal);
+  });
+};
+
+// opinionated config for Adios
+// takes me
+// updates dom from to me.config.root || document
+// puts proxy at .is
+const puller = (me = config) => {
+  me.puller = pull(me);
+  me.pull = () => me.util.elements().forEach(me.puller);
+  me.domobs = monitor(document, me.puller, watchOpts);
+  me.pull();
+  return me;
+};
+
+const Oath = (dest, promise, transform = (x) => x) => {
+  dest = dest || {}; 
+  
+  promise
+    .catch((err) => (dest.err = err))
+    .then((response) =>
+      response
+        .json()
+        .catch((err) => (dest.err = err))
+        .then((raw) => withDefault(transform(raw), raw))
+        .then((ok) => dest.ok = ok)
+    )
+    .then(console.log);
+    return dest;
+};
+
+const Adios = () => pusher(puller(config));
+
+export default Adios;
+export { Adios, Oath };

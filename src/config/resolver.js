@@ -6,8 +6,9 @@ const resolver = (me) => {
     const switcher = {
       0: () => console.error("resolver has no args."),
       1: () => {
-        // console.log(me?.be?.(), path);
-        return get(me.is, path);
+        const o = get(me.is, path);
+        // console.log(path, o);
+        return o;
       },
       2: () => set(me.is, path, value),
       3: () => console.error("resolver has 3 or more args:", args),

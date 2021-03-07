@@ -71,6 +71,8 @@ const merge = (target, ...sources) => {
 const withDefault = (maybe, fallback) =>
   maybe === undefined ? fallback : maybe;
 
+const identity = (x) => x;
+
 /*
  * 	Observable Slim
  *	Version 0.1.5
@@ -1164,21 +1166,21 @@ const puller = (me = config) => {
   return me;
 };
 
-const Oath = (dest, promise, transform = (x) => x) => {
-  dest = dest || {}; 
-  
-  promise
-    .catch((err) => (dest.err = err))
-    .then((response) =>
-      response
-        .json()
-        .catch((err) => (dest.err = err))
-        .then((raw) => withDefault(transform(raw), raw))
-        .then((ok) => dest.ok = ok)
-    )
-    .then(console.log);
-    return dest;
-};
+const Oath = (transform = identity) => ({
+  oath: function (promise) {
+    console.log("this", this);
+    promise
+      .catch((err) => (this.err = err))
+      .then((response) =>
+        response
+          .json()
+          .catch((err) => (this.err = err))
+          .then((raw) => withDefault(transform(raw, this.ok), raw))
+          .then((ok) => (this.ok = ok))
+      )
+      .then(console.log);
+  },
+});
 
 const Adios = () => pusher(puller(config));
 

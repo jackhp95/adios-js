@@ -1,0 +1,767 @@
+const { mean, mapKeys, keyBy, keys, now } = require("lodash")
+
+Maybe better api 
+which will explain the parts easier and allow for lib loading to be incremental
+
+text codec example
+
+    init: () => {}
+    stop: () => {}
+    push: () => {}
+    pull: () => {}
+
+data.is = Proxy
+
+data.eq(object) = deep compare object to proxy
+data.eq(string) = returns data at path
+data.eq(string, any) = compare value at path to provided value 
+
+data.be() = returns diff between init and now. (can be used to see what reactivity is needed. determine which codecs are likely optional)
+data.be(object) = deep merge object to proxy
+data.be(string) = returns data at path
+data.be(string, any) = compare value at path to provided value 
+        
+data.as() = returns all codecs
+data.as(codec) = adds codec after init
+data.as(string) = looks for codec with matching name and returns it
+data.as(string, object) = allows {push,pull,init,stop} to be given directly, and provide codec name seperately
+data.as(object, string) = allows {push,pull,init,stop} to be given directly, and provide codec name seperately
+data.as.codec = returns codec
+
+data.el() = all elements
+data.el(string) = elements relevant to path
+data.el(codec) = elements relevant to codec
+data.el(el) = all elements tangentially related by path
+
+data.on() = returns all event listeners
+data.on() = returns all event listeners
+data.on() =
+
+
+data.of = resolver fn. 
+data.of() = returns the pattern matching object.  
+data.of(string) = resolve the data of the provided string.
+
+
+data.do = all actions 
+data.do() = all actions used in view. (likely will use a gnarly regex until cache is reasonably robust)
+data.do(string) = finds all keys in string and runs their dos.
+data.do.action() = runs action.
+
+data.io = MutationObserver
+
+data.op = holds internal operations like init, stop, push, pull, maps, sets, caches, etc.
+
+data.go(fn) = fn to pass the args of the event to.
+data.go(string) = url to post the args of the event to.
+data.go(worker) = webworker to post the args of the event to.
+go is used for interop. 
+essentially tracks updates in data and view and will fire off when they happen
+
+
+data.at() = returns only data that exists at root
+data.at(el) = returns only data that exists at element
+
+data.in() = returns only data that exists in and at root (doesn't mean it returns ALL data.)
+data.in(el) = returns only data that exists in and at element
+
+data.to() = callback which fires when data updates
+data.by() = namespace 
+
+
+data.push() = pushes all codecs 
+data.pull() = pulls all codecs
+data.init() = returns list of initalized codecs
+data.stop() = tries to stop everything including codecs
+
+data.push[codec]() =
+data.pull[codec]() =
+data.init[codec]() =
+data.stop[codec]() =
+
+-- the core idea is just to do this simply.
+    <div data-codec-Name="path[2].resolve">
+    html.path[2].resolve() == el.codecName
+-- Simply relate data in the html to js. 
+-- No need for query selectors, no need for templates or frameworks.
+
+create a good api in HTML to build data structures in JS.
+
+-- under the hood, we DO need to query though.
+-- we do this by knowing how you're planning on connecting the view and data
+-- we call these translators (CODECS) 
+-- codecs are just two way encoders/decoders
+-- It's a fancy way of saying _this_ html should look like _that_ in JS.
+
+-- how does a codec work? 
+How does this attribute, communicate which parts of the element holds the relevant data?
+it's a setter/getter for an element.
+
+let's look at this example codec for textContent on an element.
+    push: (el, resolved, [ path, data]) => {el.textContent = resolved [=== _.get(data, path)] }
+    pull: (el, resolved, [ path, data]) => {resolved [=== _.get(data, path)] = el.textContent }
+
+    init: () => {used at start. handy for establishing eventListeners.}
+    stop: () => {ran before removal, handy wrapping up functionality.}
+
+since this code is written in js, we are pushing and pulling relative to js.
+- we are pushing updates FROM js TO html
+- we are pulling updates FROM html TO js
+
+
+-- whats this resolving stuff?
+-- think of it as a partially-applied getter/setter
+-- with its own way to locate data.
+
+    _.get(data, path) === resolver(path)
+    _.get(data, path) === resolved
+
+    _.set(data, path, value) === resolver(path, value)
+    _.set(data, path, value) === resolved(value)
+
+the nice thing about resolvers is you can customize exactly how they work,
+this means you're not tied into one particular domain.
+examples:
+if path starts with:
+    //  ->  make a fetch to an external URL
+    #   -> search the dom
+    ./  -> fetch an absolute URL 
+    /   -> a relative URL
+    fn  -> run rest of string as JS, and return the result
+    default : Look at the window object.
+
+
+this comes with a default resolver and some default codecs, but it's easy to extend.
+
+adios.codec("name", {push, pull})
+adios.resolver((str) => {xyz, yadayada})
+
+
+Reactivity
+now this is in place? How do we handle changes?
+Proxy for Data,
+Mutation Observer for HTML.
+both will fire off changes when the data or html is updated.
+we have some prebuilt mechanisms in place to handle those events and run the relevant codecs.
+This will get smarter over time. 
+updates grouped by requestAnimationFrame for better performance.
+
+Caching
+Caching mechanisms can be loaded later so the inital lib stays as small as possible,
+but the cache will essentially save all the data/element relationships and update as things change.
+The cache will also provide a good API for getting internal info.
+.paths(path|el|data|codec)
+.elements(path|el|data|codec)
+.data(path|el|data|codec)
+.codecs(path|el|data|codec)
+an empty arg will provide everything
+a method with the same type arg will find all elements tangentially related.
+ex : .element(<form>) == [_.paths(<form>), _.data(<form>), _.codecs(<form>)].flatMap(_.element)
+
+
+Events
+we also provide ways to make custom events, 
+(oncreate, onentrance, onexit, onremove, onmove)
+
+and make existing events more performant 
+(onscroll, onclick, onload)
+
+with graceful fallbacks. 
+(inline html still works, event resolvers respect that)
+
+{/* valid chars in data attributes aka codecs, useful to avoid collision */}
+(-), dot (.), colon (:) or underscore (_)
+
+, commas may be useful to pipe stuff.
+path[2].data , ./api/endpoint
+
+supporting conditionals may be nice too.
+path[2].data ? .blue : .red
+path[2].data || [hidden]
+path[2].data && .font-bold
+
+
+
+
+context | adios | $$
+    codecs      : [codecNames.map(namespace + name)]
+    events      : [eventNames.map(namespace + name)]
+    view        : [...document.querySelectorAll(allCodecSelectors())]
+    paths       : view.reduce(el.codecs => paths)
+    data        : _.merge(fromViewCodecs, onWindow)
+
+storage | maps
+    pathToEls | of  : Map("path[2].resolve", WeakSet(Els))
+    elToPaths | as  : WeakMap(el, Set("paths[2].resolve"))
+
+monitor | watch | is
+    data        : Deep Proxy  => update.view
+    view        : Mutation Observer => update.data
+    form        : onchange => update.data
+
+refresh | alter | unite | 
+    view        : Push (changes on the data to the view) : path
+    data        : Pull (changes from view into the data) : el
+
+actions | cause | do
+    these are all of the ways events will affect the data/view.
+    this gives one central location to see all page logic.
+    prefix event to avoid needing to make full path to actions.
+    prefixed actions WILL:
+    - put a path to the action on the inline attribute
+    - NULLIFY the event in the DOM.
+    This allows easy extraction, and fns to still work BEFORE actions library loaded.
+    example:
+    on-click="submitRequest"
+    onclick="adios.actions.submitRequest(this)"
+
+    { name: (el, e(event)) => fn }
+
+onevent | event | on
+    not always needed, mainly needed for non-inline events
+    - view (into, exit, init)
+    - create
+    - remove
+    - update
+    (once, capture, passive, idle, debounce, throttle, tick, etc) should be defined in the action?
+    { name: (el, path, data, e(event)) => fn }
+    
+
+convert | codec | to
+    { name: {
+        push | view: (el, path) => update the element value with the resolved data at the path (changes view)
+        pull | data: (el, path) => update the data at the resolved path with the element value (changes data)
+    } }
+
+
+    io : [ string | element ]
+
+    watch  
+    watch 
+
+    store : 
+    codec : 
+
+    context : xi || Full API
+    **  storage : is.view || is.data || is.form
+        collect : of.view || of.data || of.form
+        monitor : io.view || io.data || io.form
+        refresh : up.view || up.data || up.form
+    **  convert : to.view || to.data || to.form
+    **  onevent : on.click, on.load, on.create
+    *   resolve : [["//", go.url], ["#", go.dom], [true, go.js]].matchFirst()
+    *** actions : do.submit, do.dropdown, do.nextPage
+    *   element : at.document, at.node
+        defined : ns.data || ns.view
+
+
+Errors/Logging
+    er	expressing doubt or hesitation
+    uh	expressing hesitation
+    um	expressing hesitation
+    ow	expressing pain
+    oh	an exclamation
+    OK	used to express assent, agreement, etc.
+
+Action
+    go	to move or travel
+    do	to perform an action
+    op	an operation
+    io	(Input Output)
+
+Relation
+    on	supported by or covering
+    to	expressing direction in relation to a location
+    by	beside (Via)
+    as	used to convey relative extent or degree
+    at	expressing location or time
+    of	belonging to
+    in	within
+
+State
+    be	to exist
+    is	the present tense of be
+    it	a thing
+    an	a form of the indefinite article
+
+Collection
+    us	the objective case of we
+    we	oneself and other people
+
+Self 
+    me	the objective case of the first-person pronoun I
+    my	belonging to me
+    id	a part of the mind
+    am	the present tense of be
+
+Logic
+    no	not any
+    or	used to link alternatives
+    so	therefore
+    if	introducing a conditional clause
+
+Misc
+    bi	bisexual
+    El	element shorthand
+    os	a bone
+    up	towards a higher position
+    yo	used as a greeting
+    ex	a former spouse or partner
+
+Greek
+    mu	a Greek letter (water, change)
+    nu	a Greek letter (50, viscosity, frequency)
+    pi	a Greek letter
+    xi	a Greek letter (Universal Set)
+
+misc 
+    hi	a greeting
+    ox	a cow or bull
+    ob	prefix meaning via
+
+
+
+
+            
+
+
+resolve | query | go
+
+    data
+                primatives [String, Bool, Number]
+        [x]     array index or object field
+        .x      object field
+        then    promise [resolved, pending]
+        ()      function [(), (x), (...x)]
+        ,       resolve many
+            NOTES: 
+            `()` and `,` should both create their own resolvers.
+            `~` could be a neat way to inherit the context the resolver is nested within.
+            `this` should ref the element this resolver is on.
+            
+
+        |>      chain
+        &&      and 
+        ||      or 
+        !       not
+        ''      escape 
+
+    dom
+        #id
+        [attr]
+            I can't think of another way to access dom that would actually be useful.
+            worst case scenario, document.querySelector("xyz") should still work.
+            document is on the window, which is the root of that data resolver.
+
+    http
+        ./  relative
+        /   
+        //  external
+
+
+
+
+
+
+context | adios | $$
+    codecs      : [codecNames.map(namespace + name)]
+    events      : [eventNames.map(namespace + name)]
+    view        : [...document.querySelectorAll(allCodecSelectors())]
+    paths       : view.reduce(el.codecs => paths)
+    data        : _.merge(fromViewCodecs, onWindow)
+
+storage | maps
+    pathToEls | of  : Map("path[2].resolve", WeakSet(Els))
+    elToPaths | as  : WeakMap(el, Set("paths[2].resolve"))
+
+monitor | watch | is
+    data        : Deep Proxy  => update.view
+    view        : Mutation Observer => update.data
+    form        : onchange => update.data
+
+refresh | alter | unite | 
+    view        : Push (changes on the data to the view) : path
+    data        : Pull (changes from view into the data) : el
+
+actions | cause | do
+    these are all of the ways events will affect the data/view.
+    this gives one central location to see all page logic.
+    prefix event to avoid needing to make full path to actions.
+    prefixed actions WILL:
+    - put a path to the action on the inline attribute
+    - NULLIFY the event in the DOM.
+    This allows easy extraction, and fns to still work BEFORE actions library loaded.
+    example:
+    on-click="submitRequest"
+    onclick="adios.actions.submitRequest(this)"
+
+    { name: (el, e(event)) => fn }
+
+onevent | event | on
+    not always needed, mainly needed for non-inline events
+    - view (into, exit, init)
+    - create
+    - remove
+    - update
+    (once, capture, passive, idle, debounce, throttle, tick, etc) should be defined in the action?
+    { name: (el, path, data, e(event)) => fn }
+    
+
+convert | codec | to
+    { name: {
+        push | view: (el, path) => update the element value with the resolved data at the path (changes view)
+        pull | data: (el, path) => update the data at the resolved path with the element value (changes data)
+    } }
+
+
+
+    context : xi || Full API
+    **  storage : is.view || is.data || is.form
+        mapSets : of.view || of.data || of.form
+        monitor : io.view || io.data || io.form
+        refresh : up.view || up.data || up.form
+    **  convert : to.view || to.data || to.form
+    **  onevent : on.click, on.load, on.create
+    *   resolve : [["//", go.url], ["#", go.dom], [true, go.js]].matchFirst()
+    *** actions : do.submit, do.dropdown, do.nextPage
+    *   element : at.document, at.node
+        defined : ns.data || ns.view
+
+
+Errors/Logging
+    er	expressing doubt or hesitation
+    uh	expressing hesitation
+    um	expressing hesitation
+    ow	expressing pain
+    oh	an exclamation
+    OK	used to express assent, agreement, etc.
+
+Action
+    go	to move or travel
+    do	to perform an action
+    op	an operation
+    io	(Input Output)
+
+Relation
+    on	supported by or covering
+    to	expressing direction in relation to a location
+    by	beside (Via)
+    as	used to convey relative extent or degree
+    at	expressing location or time
+    of	belonging to
+    in	within
+
+State
+    be	to exist
+    is	the present tense of be
+    it	a thing
+    an	a form of the indefinite article
+
+Collection
+    us	the objective case of we
+    we	oneself and other people
+
+Self 
+    me	the objective case of the first-person pronoun I
+    my	belonging to me
+    id	a part of the mind
+    am	the present tense of be
+
+Logic
+    no	not any
+    or	used to link alternatives
+    so	therefore
+    if	introducing a conditional clause
+
+Misc
+    bi	bisexual
+    El	element shorthand
+    os	a bone
+    up	towards a higher position
+    yo	used as a greeting
+    ex	a former spouse or partner
+
+Greek
+    mu	a Greek letter (water, change)
+    nu	a Greek letter (50, viscosity, frequency)
+    pi	a Greek letter
+    xi	a Greek letter (Universal Set)
+
+
+
+
+    aa	rough cindery lava
+    ab	an abdominal muscle
+    ad	an advertisement
+    ag	S. African a general exclamation
+    ah	an exclamation
+    ai	the three-toed sloth
+    aw	an exclamation
+    ax	variant spelling of axe
+    ay	variant spelling of aye
+    ba	the soul, in Egyptian mythology
+    bo	a kind of fig tree
+    da	a person's father
+    dy	a type of sediment
+    ee	dialect form of oh
+    eh	an exclamation
+    em	a measuring unit in printing
+    en	a measuring unit in printing
+    fa	a musical note
+    Ga	a people in Ghana
+    gi	judo jacket
+    ha	an exclamation
+    he	a male person or animal
+    hi	a greeting
+    ho	an exclamation
+    ja	S. African yes
+    jo	Scottish, archaic a sweetheart
+    Ju	a kind of Chinese pottery
+    ka	the spirit, in Egyptian mythology
+    ki	a plant of the lily family
+    la	a musical note
+    li	a Chinese unit of distance
+    lo	archaic used to draw attention to something
+    ma	a person's mother
+    mi	a musical note
+    mo	a moment
+    né	originally called
+    ob	a type of gene
+    od	a supposed natural force
+    og	Australian, archaic a shilling
+    oi	used to attract attention
+    om	a sacred mantra
+    ou	a Hawaiian bird
+    ox	a cow or bull
+    oy	= oi
+    Oz	Australia(n)
+    pa	father
+    po	a chamber pot
+    qi	the life force, in Chinese philosophy
+    ra	a moraine, in Norway or Sweden
+    re	a musical note
+    ri	a Japanese unit of length
+    se	a Chinese musical instrument
+    si	= te
+    ta	thank you
+    te	a musical note
+    ti	= te
+    Wa	a people on the borders of China and Burma
+    Wu	a dialect of Chinese
+    xu	a Vietnamese unit of money
+    ye	archaic the plural form of thou
+    Yi	a people in parts of China
+    yu	an ancient Chinese wine container
+
+
+
+
+
+
+            
+
+
+resolve | query | go
+
+    data
+                primatives [String, Bool, Number]
+        [x]     array index or object field
+        .x      object field
+        then    promise [resolved, pending]
+        ()      function [(), (x), (...x)]
+        ,       resolve many
+            NOTES: 
+            `()` and `,` should both create their own resolvers.
+            `~` could be a neat way to inherit the context the resolver is nested within.
+            `this` should ref the element this resolver is on.
+            
+
+        |>      chain
+        &&      and 
+        ||      or 
+        !       not
+        ''      escape 
+
+    dom
+        #id
+        [attr]
+            I can't think of another way to access dom that would actually be useful.
+            worst case scenario, document.querySelector("xyz") should still work.
+            document is on the window, which is the root of that data resolver.
+
+    http
+        ./  relative
+        /   
+        //  external
+
+
+stacks
+    web
+        dev
+            twind (tailwinds)
+            lodash (helpers/chains)
+            adios (data/view sync)
+        prod
+            11ty (build pages)
+            vite (build esm)
+
+    updates
+        netlify
+            deploy
+            forms
+            functions
+        zapier
+
+    email
+        maizzle
+        sendgrid
+        improvMX
+
+    data
+        netlify-cms/github
+        supabase/hasura
+    
+    analytics
+        fullstory
+        google analytics
+        umami
+    
+
+
+
+
+
+const adios = {
+    // Mostly used internally, will likely be improved over time for perf demands
+    cache: {
+        __fn: (x) => isString(x) ? this.data : this.view,
+        view: WeakMap(element -> Set(string)),
+        data: Map(string -> WeakSet(element)),
+    },
+    every: {
+        __fn: () => { /* refresh :: checks html for ALL paths and elements with codecs */ },
+        view: WeakSet(element),
+        data: Set(stringPaths),
+    },
+    query: {
+        __fn: (x) => isString(x) ? this.data : this.view,
+        view: every.view.filter(true),
+        // all relevant elements
+        // all relevant elements related to a path
+        // all relevant elements related to a codec
+        // all relevant elements child of an element
+        data: every.data.filter(true),
+        // all relevant data
+        // all relevant data related to an element
+        // all relevent data related to a codec
+        // all relevant data at a path
+    },
+    // this holds the reactive magic. mutobs and proxies are the core of this. unite will apply the updates across locations.
+    watch: {
+        view: {
+            init: () => this.self = new MutationObserver(),
+            self: {}, // the observer
+            does: () => {}, // the callback
+            undo: () => this.self.disconnect()
+        },
+        data: {
+            init: () => new Proxy(),
+            self: {}, // the observer
+            does: () => {}, // the callback
+            undo: () => this.self.revocable()
+        },
+    }, 
+    unite: { 
+        __fn: (x) => isString(x) ? this.data : this.view,
+        view: (elOrPath) => { /* runs all codec.view related to the arg */ },
+        data: (elOrPath) => { /* runs all codec.data related to the arg */ }
+    },
+    // this is crucial. this api should be improved.
+    // maybe a regex key, with a fn value would be the best?
+    // ideally this wouldn't ever need to be extended.
+    // the default behavior should suffice.
+    serve: {
+        __fn: Object.keys(this).matchFirst,
+        url: () => {},
+        js: () => {},
+        dom: () => {},
+    },
+    // Likely to be extended and redefined.
+    apply: { 
+        init: (maybeEl) => {/* checks for onevents or namespaced events in the html and runs their starters */}
+        [codec]: {
+            view: (el, servedValue, path) => { /* applies the data to the view */ },
+            data: (el, servedValue, path) => { /* applies the view to the data */ }
+        },
+    },
+    tasks: {
+        [action]: (e) => { /* action to perform on the trigger of an event */ }
+    },
+    event: {
+        init: (maybeEl) => { /* checks for onevents or namespaced events in the html and runs their starters */ },
+        [evt]: (el) => { /* 
+            starts monitoring. 
+            interestion observer, addEventListener, rAF, onIdle, 
+            nulls the .onevent function if there is one. 
+            returns .destroy closusre 
+            */ 
+        }
+    },
+    // These are the basic defaults, handle your specefic implementation needs here
+    label: {
+        view: "data-",
+        data: "$",
+    },
+    scope: {
+        init: () => { /* checks for conflicts prior to placement. */ },
+        view: document,
+        data: window.$,
+    },
+    prior: {  // holds the prior value for the namespace
+        init: () => { /* checks for conflicts prior to placement. */ },
+        view: undefined,
+        data: undefined,
+    }
+}
+
+
+
+
+
+codec should be named link?
+
+no need for push/pull, 
+just provide a way to communicate with the html.
+if you return a value, it'll be used to get/set on the html.
+
+propLink = (name) => (el) => el[name];
+
+puller example 
+resolvedDataLocation = propLink("textContent")(el);
+
+pusher example
+propLink("textContent")(el) = resolvedDataValue;
+
+
+push/pull can be used for more complex situations like lists etc.
+
+when args return undefined, 
+
+old
+push = (el, value, path) => 
+pull = (el, value, path) =>
+
+new api
+push = (el, val) => void
+pull = (el) => return relevant value
+
+the resolver, which will handle all of this stuff,
+will be kept internal.
+no need to know the path, 
+no need to know set the value inside the codec.
+
+it keeps it real simple
+
+plus with resolver internalized entirely,
+it'll be MUCH easier to manage the caches and maps.
+keeping diffs, and time traveling debuggers will be far easier!

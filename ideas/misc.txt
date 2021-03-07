@@ -1,0 +1,67 @@
+
+pull
+    el, codec, path
+        path -> set(els)
+        path -> set(codec(el)(_value))
+        el -> set(paths)
+        path -> value
+
+
+
+push
+    path, value
+        path -> set(el)
+        path -> set(codec(el)(_value))
+        path -> value
+
+
+
+        
+
+get.value(path) => value
+get.value(el) => values
+
+get.el(path) => elements
+
+get.path(element) => paths
+
+
+els.flatMap(el => Object.entries(el.dataset).map([k,v] => [v, me.codecs[k].pull(el)])) => [...[paths, pulledValues]]
+
+
+
+
+
+
+This is shaping up nicely.
+
+All I really want is promise to update the issue is the new value isn't triggering the list to update.
+
+the new value update is at sg.data, which isn't sg.data.ok.events, so it's ignored.
+
+there are two ways to solve this.
+
+    - push update EVERYTHING, 
+    but pull the value existing in dom, and if it differs push an update. 
+    This should keep it moderately performant.
+
+
+    - build ALL relevant paths, from data changes. 
+    If new value is an object, find the possible paths and combine them with the currentPath.
+    if an element is added, find the parent, and include that in the search.
+
+    this should have the least performance impact, and could be most likely to improve down the line.
+    (Maps, caching could really imrpve this method. ESPECIALLY if I get good integration with dom observer to keep the caches always up to date.)
+    I really think this should be the way I go. Seems like the least convenient because it's the most accurate.
+    Which means if I don't do it now I'll regret it later.
+
+
+------------
+
+Todo:
+Fix hydration flash. 
+    - (When the page is hydrated, and the data is pulled, fetch data will flash [object Object])
+Make Pulls more reliable. 
+    - (Right now, a pull isn't really hydrating the data.)
+Write better docs.
+    - introduce concepts, etc.

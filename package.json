@@ -1,18 +1,14 @@
 {
   "version": "0.1.3",
   "license": "MIT",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "main": "src/adios.js",
   "files": [
-    "dist",
+    "build",
     "src"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/jackhp95/adios-js"
-  },
-  "exports": {
-    "import": "./dist/adios-js.esm.js"
   },
   "keywords": [
     "adios",
@@ -22,54 +18,15 @@
     "stimulus",
     "san"
   ],
-  "engines": {
-    "node": ">=10"
-  },
   "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test",
-    "lint": "tsdx lint",
-    "prepare": "tsdx build",
-    "size": "size-limit",
-    "analyze": "size-limit --why"
-  },
-  "peerDependencies": {},
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx lint"
-    }
-  },
-  "prettier": {
-    "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
+    "start": "rollup -c"
   },
   "name": "adios-js",
   "author": "Jack H. Peterson",
-  "module": "dist/adios-js.esm.js",
-  "size-limit": [
-    {
-      "path": "dist/adios.cjs.production.min.js",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/adios-js.esm.js",
-      "limit": "10 KB"
-    }
-  ],
-  "devDependencies": {
-    "@size-limit/preset-small-lib": "^4.6.2",
-    "@types/lodash": "^4.14.162",
-    "husky": "^4.3.0",
-    "size-limit": "^4.6.2",
-    "tsdx": "^0.14.0",
-    "tslib": "^2.0.1",
-    "typescript": "^3.9.7"
-  },
+  "module": "build/adios.js",
   "dependencies": {
-    "lodash-es": "^4.17.15",
-    "tslint": "^6.1.3"
+    "@11ty/eleventy": "^0.11.1",
+    "rollup": "^2.40.0",
+    "rollup-plugin-terser": "^7.0.2"
   }
 }

@@ -1,0 +1,40 @@
+Pusher And Puller Optimizations
+
+Puller is powered by MutationObserver,
+MutationObserver is powered by Microtasks
+Microtasks run in a queue batch. (not a stack)
+
+1) If we take the elements from a mutation observer, 
+2) throw the elements in an set, 
+3) check the element set on an Interval
+4) ignore when set.size is falsy, eject, 
+5) else process unique elements
+
+
+Pusher should batch before the frame is rendered
+Which means 
+
+1) push should return a closure with dom update.
+2) These dom push closures will be placed in a set
+3) check the closure set on an Interval
+4) ignore when set.size is falsy, eject, 
+5) else process unique closures
+
+
+This is a terse next sentence:
+rewrite push to use microtasks, 
+to ensure the stack is empty ,
+before batching all push closures,
+into a requestAnimationFrame!
+
+
+PUSH REWRITE
+Basically, we want to collect all data changes.
+Then we want to find the unique paths. (path from proxy + if value is object, flatten it, and include those paths too.)
+Then we want to scour the dom for those codec/path combos. (Shouldn't have duplicates if it's one big querySelectorAll)
+then we want to grab the closures for codecs with the get(path). (This will apply all relevant closures, to all relevant elements)
+then we want to batch closures inside of a RAF.
+
+
+
+

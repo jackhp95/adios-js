@@ -1,0 +1,98 @@
+
+
+-- VIEW APIS
+-- pull
+data.of() // pulls all codec data of all elements
+data.of(el) // pulls all codec data of element
+data.of[codec]() // pulls codec data of all elements via the codec
+data.of[codec](el) // pulls codec data of element via codec
+
+-- push
+data.to() // pushes data to all codecs on all elements
+data.to(el) // pushes data to all codecs on element
+data.to[codec]() // pushes data to all elements via codec 
+data.to[codec](el) // pushes data to element via codec 
+
+-- resolver
+data.at() // returns at config 
+data.at(bool) // not sure, should be handled though
+data.at(string) // resolves data at path using config
+data.at(config) // updates config with provided object.
+
+-- query
+data.el() = all elements
+data.el(string) = elements relevant to path
+data.el(codec) = elements relevant to codec
+data.el(el) = all elements tangentially related by path
+
+
+
+-- DATA APIS
+-- data proxy
+data.is // monitors data
+
+-- data proxy via fn (obj) => { data.is = obj } // data.is only updates the value IF it has changed
+data.be() = returns diff between init and now. (can be used to see what reactivity is needed. determine which codecs are likely optional)
+data.be(object) = deep merge object to proxy
+data.be(string) = returns data at path
+data.be(string, any) = compare value at path to provided value 
+
+
+
+-- USER INTERACTION
+-- events
+data.on() // returns all listeners
+data.on(obj) // add listeners, activates them, returns 
+data.on(el) // returns listeners on element
+data.on(string) // returns listeners with provided names
+data.on(el, string) // returns callback
+data.on(el, string, cb) // returns 
+
+-- actions
+data.do() = returns all actions
+data.do(string) = finds all keys in string and runs their dos.
+data.do(object) = provides new actions, returns all actions
+data.do(true) = returns actions used in view.
+data.do(false) = returns unused actions in view.
+data.do[action]() = runs action.
+
+
+
+
+-- INTERNAL OEPRATIONS
+data.op = holds internal operations like mutobs, proxier, init, stop, push, pull, maps, sets, caches, etc.
+
+
+
+-- EXTERNAL OPERATIONS
+data.go(fn) = fn to pass the args of the event to.
+data.go(string) = url to post the args of the event to.
+data.go(worker) = webworker to post the args of the event to.
+go is used for interop. 
+essentially tracks updates in data and view and will fire off when they happen
+
+
+-- TYPES 
+-- -- CODECS
+    -- push!
+    -- pull!
+    -- init
+    -- stop
+    -- test
+
+
+-- -- ACTIONS
+    -- push!
+    -- pull!
+    -- init
+    -- stop
+    -- test
+    
+
+-- -- EVENTS
+    -- push!
+    -- pull!
+    -- init
+    -- stop
+    -- test
+    

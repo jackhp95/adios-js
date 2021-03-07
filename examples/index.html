@@ -692,8 +692,9 @@
                     event.performers[0].image || (event.performers[0].image = ui.icon.dots);
                 });
             };
-            data.is.sg = {};
-            Oath(data.is.sg, fetch(sgUrl), tranformEvents);
+
+            data.is.sg = Oath(tranformEvents);
+            data.is.sg.oath(fetch(sgUrl));
 
 
         </script>

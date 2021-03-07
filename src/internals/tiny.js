@@ -133,6 +133,8 @@ const unflatten = (obj) =>
 const withDefault = (maybe, fallback) =>
   maybe === undefined ? fallback : maybe;
 
+const identity = (x) => x;
+
 const batch = queueMicrotask;
 const queue = () => setTimeout(fn, 0);
 const beforeFrame = requestAnimationFrame;
@@ -141,6 +143,7 @@ const nextFrame = (fn) => beforeFrame(beforeFrame(fn));
 const idle = (fn) => requestIdleCallback(fn);
 
 export {
+  identity,
   batch,
   queue,
   beforeFrame,

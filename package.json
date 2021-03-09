@@ -21,17 +21,17 @@
   ],
   "scripts": {
     "start": "rollup -c",
-    "bump": "bump"
+    "bump": "np --yolo"
   },
   "name": "adios-js",
   "author": "Jack H. Peterson",
   "module": "src/adios.js",
   "type": "module",
   "dependencies": {
-    "core-js": "^3.9.1",
-    "version-bump-prompt": "^6.1.0"
+    "core-js": "^3.9.1"
   },
   "devDependencies": {
+    "np": "^7.4.0",
     "@11ty/eleventy": "^0.11.1",
     "rollup": "^2.40.0",
     "rollup-plugin-terser": "^7.0.2",

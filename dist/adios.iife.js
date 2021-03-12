@@ -310,7 +310,8 @@ var Adios = (function (exports) {
         //   if (observable.paused === true) return;
         // execute observer functions on a 10ms settimeout, this prevents the observer functions from being executed
         // separately on every change -- this is necessary because the observer functions will often trigger UI updates
-        if (!!requestIdleCallback) {
+        // was !!requestIdleCallback, but safari is too fickle.
+        if (typeof requestIdleCallback !== "undefined") {
           requestIdleCallback(function () {
             if (numChanges === changes.length) {
               // we create a copy of changes before passing it to the observer functions because even if the observer function

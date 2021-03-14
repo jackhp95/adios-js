@@ -53,7 +53,7 @@ const monitor = (
 // can be throughly improved with a good map;
 // pushCodecClosureMap.get(path)(val);
 const push = (me) => (path = "") => {
-  console.log({ path, be: me.be() });
+  // console.log({ path, be: me.be() });
   const els = me.util.elements(path, true);
   // console.log("Relevant:", { type, usePath, isUpdate, els });
   // push updates to each codec on element

@@ -41,6 +41,7 @@ const attr = (name) => ({
 
 const each = (me) => ({
   push: (el, val = {}) => {
+    console.log(el, val);
     const rootPath = el.dataset.each;
     // the filter function prevents __internal fields from being exposed
     const items = Object.keys(val).filter((s) => !/^__/.exec(s));
@@ -51,7 +52,8 @@ const each = (me) => ({
     const [children, closures] = items
       .map((k) => {
         const child = clone();
-        const binds = [...child.querySelectorAll(me.util.selectors())];
+        // don't forget to include the child itself, it's skipped in the querySelectorAll
+        const binds = [child, ...child.querySelectorAll(me.util.selectors())];
         const asClosures = (ele) =>
           Object.entries(ele.dataset)
             .filter(([_codec, itemPath]) =>
@@ -79,10 +81,13 @@ const each = (me) => ({
         ],
         [[], []]
       );
+    // closures were previously included in the push closure
+    // why tho? All the logic is happening in a clone,
+    // the dom mods shouldn't fire a rerender since it's not in the doc.
+    closures.map((fn) => fn());
 
     return () => {
       siblings().forEach((x) => x.remove());
-      closures.map((fn) => fn());
       parent.append(...children);
     };
   },

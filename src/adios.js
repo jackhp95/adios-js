@@ -19,7 +19,6 @@ const Oath = (transform = identity) => ({
   },
 });
 
-const Adios = () => pusher(puller(config));
+const Adios = (me) => pusher(puller(config(me)));
 
 export { Adios, Oath };
-export default Adios;

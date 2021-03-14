@@ -1,4 +1,4 @@
-import { intersection, set, isString } from "../internals/tiny.js";
+import { intersection, set, isString, merge } from "../internals/tiny.js";
 
 /**
  * Codec
@@ -148,7 +148,9 @@ const inject = (me) => ({
 });
 
 const codecs = (me = {}) => {
-  me.codecs = {
+  // assign codec object if non exists
+  const given = me.codecs || {};
+  const defaults = {
     text: prop("textContent"),
     html: prop("innerHTML"),
     href: prop("href"),
@@ -162,6 +164,8 @@ const codecs = (me = {}) => {
     each: each(me),
     inject: inject(me),
   };
+  // merge defaults, overwrite defaults with given.
+  me.codecs = merge(defaults, given);
   return me;
 };
 

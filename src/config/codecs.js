@@ -41,7 +41,7 @@ const attr = (name) => ({
 
 const each = (me) => ({
   push: (el, val = {}) => {
-    console.log(el, val);
+    // console.log(el, val);
     const rootPath = el.dataset.each;
     // the filter function prevents __internal fields from being exposed
     const items = Object.keys(val).filter((s) => !/^__/.exec(s));
@@ -123,7 +123,7 @@ const inject = (me) => ({
           src: el.dataset.src,
           url,
         });
-        return () => {};
+        return;
       }
 
       fetch(url).then((response) =>
@@ -131,7 +131,6 @@ const inject = (me) => ({
           .text()
           .catch(console.log)
           .then((nodeStr) => {
-            // requestAnimationFrame(() => {
             // prevent multiple injections
             if (el?.nextElementSibling?.dataset?.injected) {
               return;
@@ -143,7 +142,6 @@ const inject = (me) => ({
             el.insertAdjacentElement("afterend", injectedEl);
             injectedEl.dataset.injected = true;
             me.util.hide(el);
-            // });
           })
       );
     }),

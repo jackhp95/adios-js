@@ -22,7 +22,7 @@ const set = (obj, path, value) =>
     .split(".")
     .reduce(
       (acc = {}, c, i, { length }) =>
-        i + 1 === length ? (acc[c] = value) : acc?.[c],
+        i + 1 === length ? (acc[c] = value) : c in acc ? acc[c] : (acc[c] = {}),
       obj
     );
 

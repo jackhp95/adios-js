@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html
+    hidden
+    lang="en"
+>
 
     <head>
         <meta charset="UTF-8">
@@ -15,10 +18,6 @@
         <link
             rel="icon"
             href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👋</text></svg>"
-        >
-        <link
-            href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css"
-            rel="stylesheet"
         >
         <style>
             [hidden] {
@@ -595,7 +594,7 @@
         </div>
         <script type="module">
             import _ from "https://cdn.skypack.dev/lodash";
-            import { flatten } from "../src/internals/tiny.js";
+            import { flatten } from "/src/internals/tiny.js";
             import { Oath, Adios } from "/src/adios.js"
             // import Adios from "/dist/adios.js"
             window.data = Adios();
@@ -703,8 +702,11 @@
 
             data.is.sg = Oath(tranformEvents);
             data.is.sg.oath(fetch(sgUrl));
-
-
+        </script>
+        <script type="module">
+            import { setup } from 'https://cdn.skypack.dev/twind/shim'
+            import { domSheet } from 'https://cdn.skypack.dev/twind/sheets'
+            setup({ sheet: domSheet() })
         </script>
     </body>
 

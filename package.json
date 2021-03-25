@@ -28,7 +28,13 @@
   "module": "src/adios.js",
   "type": "module",
   "dependencies": {
-    "core-js": "^3.9.1"
+    "core-js": "^3.9.1",
+    "fast-glob": "^3.2.5",
+    "fs-extra": "^9.1.0",
+    "html-minifier": "^4.0.0",
+    "lodash": "^4.17.21",
+    "puppeteer": "^8.0.0",
+    "twind": "^0.16.7"
   },
   "devDependencies": {
     "@11ty/eleventy": "^0.11.1",

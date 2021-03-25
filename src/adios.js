@@ -5,7 +5,7 @@ import { config } from "./config/default.js";
 
 const Oath = (transform = identity) => ({
   oath: function (promise) {
-    console.log("this", this);
+    // console.log("this", this);
     promise
       .catch((err) => (this.err = err))
       .then((response) =>
@@ -15,7 +15,7 @@ const Oath = (transform = identity) => ({
           .then((raw) => withDefault(transform(raw, this.ok), raw))
           .then((ok) => (this.ok = ok))
       )
-      .then(console.log);
+      // .then(console.log);
   },
 });
 

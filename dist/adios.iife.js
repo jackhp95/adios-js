@@ -142,7 +142,7 @@ var Adios = (function (exports) {
       var _ref = arguments.length > 3 ? arguments[3] : undefined,
           length = _ref.length;
 
-      return i + 1 === length ? acc[c] = value : acc === null || acc === void 0 ? void 0 : acc[c];
+      return i + 1 === length ? acc[c] = value : c in acc ? acc[c] : acc[c] = {};
     }, obj);
   };
 
@@ -913,6 +913,7 @@ var Adios = (function (exports) {
     return {
       push: function push(el) {
         var val = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        // console.log(el, val);
         var rootPath = el.dataset.each; // the filter function prevents __internal fields from being exposed
 
         var items = Object.keys(val).filter(function (s) {
@@ -932,9 +933,9 @@ var Adios = (function (exports) {
         };
 
         var _items$map$reduce = items.map(function (k) {
-          var child = clone();
+          var child = clone(); // don't forget to include the child itself, it's skipped in the querySelectorAll
 
-          var binds = _toConsumableArray(child.querySelectorAll(me.util.selectors()));
+          var binds = [child].concat(_toConsumableArray(child.querySelectorAll(me.util.selectors())));
 
           var asClosures = function asClosures(ele) {
             return Object.entries(ele.dataset).filter(function (_ref) {
@@ -973,14 +974,17 @@ var Adios = (function (exports) {
         }, [[], []]),
             _items$map$reduce2 = _slicedToArray(_items$map$reduce, 2),
             children = _items$map$reduce2[0],
-            closures = _items$map$reduce2[1];
+            closures = _items$map$reduce2[1]; // closures were previously included in the push closure
+        // why tho? All the logic is happening in a clone,
+        // the dom mods shouldn't fire a rerender since it's not in the doc.
 
+
+        closures.map(function (fn) {
+          return fn();
+        });
         return function () {
           siblings().forEach(function (x) {
             return x.remove();
-          });
-          closures.map(function (fn) {
-            return fn();
           });
           parent.append.apply(parent, _toConsumableArray(children));
         };
@@ -1023,14 +1027,13 @@ var Adios = (function (exports) {
                   src: el.dataset.src,
                   url: url
                 });
-                return function () {};
+                return;
               }
 
               fetch(url).then(function (response) {
                 return response.text().catch(console.log).then(function (nodeStr) {
                   var _el$nextElementSiblin, _el$nextElementSiblin2, _injectedEl$classList;
 
-                  // requestAnimationFrame(() => {
                   // prevent multiple injections
                   if (el !== null && el !== void 0 && (_el$nextElementSiblin = el.nextElementSibling) !== null && _el$nextElementSiblin !== void 0 && (_el$nextElementSiblin2 = _el$nextElementSiblin.dataset) !== null && _el$nextElementSiblin2 !== void 0 && _el$nextElementSiblin2.injected) {
                     return;
@@ -1044,7 +1047,7 @@ var Adios = (function (exports) {
 
                   el.insertAdjacentElement("afterend", injectedEl);
                   injectedEl.dataset.injected = true;
-                  me.util.hide(el); // });
+                  me.util.hide(el);
                 });
               });
             })
@@ -1061,7 +1064,9 @@ var Adios = (function (exports) {
 
   var codecs = function codecs() {
     var me = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    me.codecs = {
+    // assign codec object if non exists
+    var given = me.codecs || {};
+    var defaults = {
       text: prop("textContent"),
       html: prop("innerHTML"),
       href: prop("href"),
@@ -1080,7 +1085,9 @@ var Adios = (function (exports) {
       replace: prop("outerHTML"),
       each: each(me),
       inject: inject(me)
-    };
+    }; // merge defaults, overwrite defaults with given.
+
+    me.codecs = merge(defaults, given);
     return me;
   };
 
@@ -1244,9 +1251,12 @@ var Adios = (function (exports) {
     }
   };
   var dynamic = [resolver, util, codecs];
-  var config = dynamic.reduce(function (acc, cur) {
-    return cur(acc);
-  }, fixed);
+
+  var config = function config(me) {
+    return dynamic.reduce(function (acc, cur) {
+      return cur(acc);
+    }, merge(fixed, me));
+  };
 
   var noop$1 = function noop() {};
 
@@ -1304,10 +1314,7 @@ var Adios = (function (exports) {
   var push = function push(me) {
     return function () {
       var path = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "";
-      console.log({
-        path: path,
-        be: me.be()
-      });
+      // console.log({ path, be: me.be() });
       var els = me.util.elements(path, true); // console.log("Relevant:", { type, usePath, isUpdate, els });
       // push updates to each codec on element
 
@@ -1438,7 +1445,7 @@ var Adios = (function (exports) {
       oath: function oath(promise) {
         var _this = this;
 
-        console.log("this", this);
+        // console.log("this", this);
         promise.catch(function (err) {
           return _this.err = err;
         }).then(function (response) {
@@ -1449,18 +1456,17 @@ var Adios = (function (exports) {
           }).then(function (ok) {
             return _this.ok = ok;
           });
-        }).then(console.log);
+        }); // .then(console.log);
       }
     };
   };
 
-  var Adios = function Adios() {
-    return pusher(puller(config));
+  var Adios = function Adios(me) {
+    return pusher(puller(config(me)));
   };
 
   exports.Adios = Adios;
   exports.Oath = Oath;
-  exports.default = Adios;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 

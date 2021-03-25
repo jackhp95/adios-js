@@ -16,7 +16,7 @@ const set = (obj, path, value) =>
     .split(".")
     .reduce(
       (acc = {}, c, i, { length }) =>
-        i + 1 === length ? (acc[c] = value) : acc?.[c],
+        i + 1 === length ? (acc[c] = value) : c in acc ? acc[c] : (acc[c] = {}),
       obj
     );
 
@@ -822,6 +822,7 @@ const prop = (name) => ({
 
 const each = (me) => ({
   push: (el, val = {}) => {
+    // console.log(el, val);
     const rootPath = el.dataset.each;
     // the filter function prevents __internal fields from being exposed
     const items = Object.keys(val).filter((s) => !/^__/.exec(s));
@@ -832,7 +833,8 @@ const each = (me) => ({
     const [children, closures] = items
       .map((k) => {
         const child = clone();
-        const binds = [...child.querySelectorAll(me.util.selectors())];
+        // don't forget to include the child itself, it's skipped in the querySelectorAll
+        const binds = [child, ...child.querySelectorAll(me.util.selectors())];
         const asClosures = (ele) =>
           Object.entries(ele.dataset)
             .filter(([_codec, itemPath]) =>
@@ -860,10 +862,13 @@ const each = (me) => ({
         ],
         [[], []]
       );
+    // closures were previously included in the push closure
+    // why tho? All the logic is happening in a clone,
+    // the dom mods shouldn't fire a rerender since it's not in the doc.
+    closures.map((fn) => fn());
 
     return () => {
       siblings().forEach((x) => x.remove());
-      closures.map((fn) => fn());
       parent.append(...children);
     };
   },
@@ -899,7 +904,7 @@ const inject = (me) => ({
           src: el.dataset.src,
           url,
         });
-        return () => {};
+        return;
       }
 
       fetch(url).then((response) =>
@@ -907,7 +912,6 @@ const inject = (me) => ({
           .text()
           .catch(console.log)
           .then((nodeStr) => {
-            // requestAnimationFrame(() => {
             // prevent multiple injections
             if (el?.nextElementSibling?.dataset?.injected) {
               return;
@@ -919,7 +923,6 @@ const inject = (me) => ({
             el.insertAdjacentElement("afterend", injectedEl);
             injectedEl.dataset.injected = true;
             me.util.hide(el);
-            // });
           })
       );
     }),
@@ -929,7 +932,9 @@ const inject = (me) => ({
 });
 
 const codecs = (me = {}) => {
-  me.codecs = {
+  // assign codec object if non exists
+  const given = me.codecs || {};
+  const defaults = {
     text: prop("textContent"),
     html: prop("innerHTML"),
     href: prop("href"),
@@ -943,6 +948,8 @@ const codecs = (me = {}) => {
     each: each(me),
     inject: inject(me),
   };
+  // merge defaults, overwrite defaults with given.
+  me.codecs = merge(defaults, given);
   return me;
 };
 
@@ -1035,7 +1042,7 @@ const fixed = {
   config: { root: document },
 };
 const dynamic = [resolver, util, codecs];
-const config = dynamic.reduce((acc, cur) => cur(acc), fixed);
+const config = (me) => dynamic.reduce((acc, cur) => cur(acc), merge(fixed, me));
 
 const noop$1 = () => {};
 
@@ -1080,7 +1087,7 @@ const monitor$1 = (
 // can be throughly improved with a good map;
 // pushCodecClosureMap.get(path)(val);
 const push = (me) => (path = "") => {
-  console.log({ path, be: me.be() });
+  // console.log({ path, be: me.be() });
   const els = me.util.elements(path, true);
   // console.log("Relevant:", { type, usePath, isUpdate, els });
   // push updates to each codec on element
@@ -1169,7 +1176,7 @@ const puller = (me = config) => {
 
 const Oath = (transform = identity) => ({
   oath: function (promise) {
-    console.log("this", this);
+    // console.log("this", this);
     promise
       .catch((err) => (this.err = err))
       .then((response) =>
@@ -1178,12 +1185,11 @@ const Oath = (transform = identity) => ({
           .catch((err) => (this.err = err))
           .then((raw) => withDefault(transform(raw, this.ok), raw))
           .then((ok) => (this.ok = ok))
-      )
-      .then(console.log);
+      );
+      // .then(console.log);
   },
 });
 
-const Adios = () => pusher(puller(config));
+const Adios = (me) => pusher(puller(config(me)));
 
-export default Adios;
 export { Adios, Oath };

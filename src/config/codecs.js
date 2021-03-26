@@ -99,7 +99,7 @@ const each = (me) => ({
     els.forEach((ele) => {
       const hasCodecs = intersection(Object.keys(ele.dataset), codecs);
       hasCodecs.forEach((c) => {
-        const pulledVal = me.codecs[c].pull(el);
+        const pulledVal = me.codecs[c].pull(ele);
         const subPath = ele.dataset[c].replace(prefix + ".", "");
         set(result, subPath, pulledVal);
       });

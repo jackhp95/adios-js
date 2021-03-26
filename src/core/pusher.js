@@ -59,12 +59,9 @@ const push = (me) => (path = "") => {
   // push updates to each codec on element
   const pushToCodec = (el) => (_codec) => {
     const value = el.dataset[_codec] && me.resolver(el.dataset[_codec]);
-    const pushToView = () => {
-      const closure = me.codecs[_codec].push(el, value);
-      // console.log({ _codec, path, value });
-      requestAnimationFrame(closure);
-    };
-    undefined !== value && queueMicrotask(pushToView);
+    const closure = me.codecs[_codec].push(el, value);
+    // console.log({ _codec, path, value });
+    requestAnimationFrame(closure);
   };
   // will be false if codec doesn't exist AND path doesn't match
   const isRelevant = (_codec) => _codec in me.codecs;

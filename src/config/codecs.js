@@ -150,6 +150,22 @@ const inject = (me) => ({
     el?.nextElementSibling?.outerHtml,
 });
 
+const boolProp = (me) => (codecName, propName, flip = true) => {
+  const asBool = (x) => (flip ? !x : !!x);
+  return {
+    [codecName]: {
+      push: (el, val) => () => (el[propName] = asBool(val)),
+      // prevents bools replacing important data like objects or arrays
+      pull: (el) => {
+        const dataVal = me.resolver(el.dataset[codecName]);
+        const propVal = el[propName];
+        const falseyMatch = propVal === asBool(dataVal);
+        return falseyMatch ? dataVal : propVal;
+      },
+    },
+  };
+};
+
 const codecs = (me = {}) => {
   // assign codec object if non exists
   const given = me.codecs || {};
@@ -163,6 +179,10 @@ const codecs = (me = {}) => {
         () => isString(val) && val && (el.src = val),
       pull: (el) => el.src || undefined,
     },
+    ...boolProp(me)("show", "hidden"),
+    ...boolProp(me)("hide", "hidden", false),
+    ...boolProp(me)("disable", "disabled"),
+    ...boolProp(me)("enable", "disabled", false),
     replace: prop("outerHTML"),
     each: each(me),
     inject: inject(me),

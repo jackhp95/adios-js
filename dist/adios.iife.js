@@ -32,6 +32,40 @@ var Adios = (function (exports) {
     return obj;
   }
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   function _slicedToArray(arr, i) {
     return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
   }
@@ -999,7 +1033,7 @@ var Adios = (function (exports) {
         els.forEach(function (ele) {
           var hasCodecs = intersection(Object.keys(ele.dataset), codecs);
           hasCodecs.forEach(function (c) {
-            var pulledVal = me.codecs[c].pull(el);
+            var pulledVal = me.codecs[c].pull(ele);
             var subPath = ele.dataset[c].replace(prefix + ".", "");
             set(result, subPath, pulledVal);
           });
@@ -1062,11 +1096,37 @@ var Adios = (function (exports) {
     };
   };
 
+  var boolProp = function boolProp(me) {
+    return function (codecName, propName) {
+      var flip = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+
+      var asBool = function asBool(x) {
+        return flip ? !x : !!x;
+      };
+
+      return _defineProperty({}, codecName, {
+        push: function push(el, val) {
+          return function () {
+            return el[propName] = asBool(val);
+          };
+        },
+        // prevents bools replacing important data like objects or arrays
+        pull: function pull(el) {
+          var dataVal = me.resolver(el.dataset[codecName]);
+          var propVal = el[propName];
+          var falseyMatch = propVal === asBool(dataVal);
+          return falseyMatch ? dataVal : propVal;
+        }
+      });
+    };
+  };
+
   var codecs = function codecs() {
     var me = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     // assign codec object if non exists
     var given = me.codecs || {};
-    var defaults = {
+
+    var defaults = _objectSpread2(_objectSpread2(_objectSpread2(_objectSpread2(_objectSpread2({
       text: prop("textContent"),
       html: prop("innerHTML"),
       href: prop("href"),
@@ -1081,11 +1141,13 @@ var Adios = (function (exports) {
         pull: function pull(el) {
           return el.src || undefined;
         }
-      },
+      }
+    }, boolProp(me)("show", "hidden")), boolProp(me)("hide", "hidden", false)), boolProp(me)("disable", "disabled")), boolProp(me)("enable", "disabled", false)), {}, {
       replace: prop("outerHTML"),
       each: each(me),
       inject: inject(me)
-    }; // merge defaults, overwrite defaults with given.
+    }); // merge defaults, overwrite defaults with given.
+
 
     me.codecs = merge(defaults, given);
     return me;
@@ -1322,14 +1384,10 @@ var Adios = (function (exports) {
         return function (_codec) {
           var value = el.dataset[_codec] && me.resolver(el.dataset[_codec]);
 
-          var pushToView = function pushToView() {
-            var closure = me.codecs[_codec].push(el, value); // console.log({ _codec, path, value });
+          var closure = me.codecs[_codec].push(el, value); // console.log({ _codec, path, value });
 
 
-            requestAnimationFrame(closure);
-          };
-
-          undefined !== value && queueMicrotask(pushToView);
+          requestAnimationFrame(closure);
         };
       }; // will be false if codec doesn't exist AND path doesn't match
 

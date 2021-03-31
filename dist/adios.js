@@ -880,7 +880,7 @@ const each = (me) => ({
     els.forEach((ele) => {
       const hasCodecs = intersection(Object.keys(ele.dataset), codecs);
       hasCodecs.forEach((c) => {
-        const pulledVal = me.codecs[c].pull(el);
+        const pulledVal = me.codecs[c].pull(ele);
         const subPath = ele.dataset[c].replace(prefix + ".", "");
         set(result, subPath, pulledVal);
       });
@@ -931,6 +931,22 @@ const inject = (me) => ({
     el?.nextElementSibling?.outerHtml,
 });
 
+const boolProp = (me) => (codecName, propName, flip = true) => {
+  const asBool = (x) => (flip ? !x : !!x);
+  return {
+    [codecName]: {
+      push: (el, val) => () => (el[propName] = asBool(val)),
+      // prevents bools replacing important data like objects or arrays
+      pull: (el) => {
+        const dataVal = me.resolver(el.dataset[codecName]);
+        const propVal = el[propName];
+        const falseyMatch = propVal === asBool(dataVal);
+        return falseyMatch ? dataVal : propVal;
+      },
+    },
+  };
+};
+
 const codecs = (me = {}) => {
   // assign codec object if non exists
   const given = me.codecs || {};
@@ -944,6 +960,10 @@ const codecs = (me = {}) => {
         () => isString(val) && val && (el.src = val),
       pull: (el) => el.src || undefined,
     },
+    ...boolProp(me)("show", "hidden"),
+    ...boolProp(me)("hide", "hidden", false),
+    ...boolProp(me)("disable", "disabled"),
+    ...boolProp(me)("enable", "disabled", false),
     replace: prop("outerHTML"),
     each: each(me),
     inject: inject(me),
@@ -1093,12 +1113,9 @@ const push = (me) => (path = "") => {
   // push updates to each codec on element
   const pushToCodec = (el) => (_codec) => {
     const value = el.dataset[_codec] && me.resolver(el.dataset[_codec]);
-    const pushToView = () => {
-      const closure = me.codecs[_codec].push(el, value);
-      // console.log({ _codec, path, value });
-      requestAnimationFrame(closure);
-    };
-    undefined !== value && queueMicrotask(pushToView);
+    const closure = me.codecs[_codec].push(el, value);
+    // console.log({ _codec, path, value });
+    requestAnimationFrame(closure);
   };
   // will be false if codec doesn't exist AND path doesn't match
   const isRelevant = (_codec) => _codec in me.codecs;

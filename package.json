@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "start": "rollup -c",
-    "bump": "np --yolo"
+    "bump": "rollup -c && np --yolo"
   },
   "name": "adios-js",
   "author": "Jack H. Peterson",

@@ -15,7 +15,7 @@ import { intersection, set, isString, merge } from "../internals/tiny.js";
  * @returns {codec} - the codec object
  */
 const prop = (name) => ({
-  push: (el, val) => () => (el[name] = val),
+  push: (el, val) => () => el[name] === val || (el[name] = val),
   pull: (el) => el[name] || undefined,
 });
 
@@ -35,7 +35,8 @@ const dual = (name) => ({
  * @param {string} name
  */
 const attr = (name) => ({
-  push: (el, val) => () => el.setAttribute(name, val),
+  push: (el, val) => () =>
+    el.getAttribute(name) === val || el.setAttribute(name, val),
   pull: (el) => el.getAttribute(name) || undefined,
 });
 

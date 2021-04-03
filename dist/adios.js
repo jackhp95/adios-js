@@ -816,7 +816,7 @@ function prox () {
  * @returns {codec} - the codec object
  */
 const prop = (name) => ({
-  push: (el, val) => () => (el[name] = val),
+  push: (el, val) => () => el[name] === val || (el[name] = val),
   pull: (el) => el[name] || undefined,
 });
 

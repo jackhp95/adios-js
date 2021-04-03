@@ -934,7 +934,7 @@ var Adios = (function (exports) {
     return {
       push: function push(el, val) {
         return function () {
-          return el[name] = val;
+          return el[name] === val || (el[name] = val);
         };
       },
       pull: function pull(el) {
